@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FileText } from 'lucide-react';
+import Mermaid from './Mermaid';
 
 export default function MarkdownRenderer({ content, fontSizeFactor }) {
   if (!content) {
@@ -22,7 +23,18 @@ export default function MarkdownRenderer({ content, fontSizeFactor }) {
   return (
     <div className="content-scroll">
       <div className="markdown-body">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({node, inline, className, children, ...props}) {
+              const match = /language-(\w+)/.exec(className || '');
+              if (!inline && match && match[1] === 'mermaid') {
+                return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+              }
+              return <code className={className} {...props}>{children}</code>;
+            }
+          }}
+        >
           {content}
         </ReactMarkdown>
       </div>

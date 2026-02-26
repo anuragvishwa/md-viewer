@@ -9,11 +9,11 @@ export default function Sidebar({ isOpen, files, activeFileId, onSelectFile, onN
   };
 
   const handleFileChange = (e) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      onFileUpload(files[0]);
+    const fileList = Array.from(e.target.files);
+    if (fileList.length > 0) {
+      onFileUpload(fileList);
     }
-    // Reset the input so the same file can be uploaded again if needed
+    // Reset the input so the same file(s) can be uploaded again if needed
     e.target.value = null;
   };
 
@@ -33,6 +33,7 @@ export default function Sidebar({ isOpen, files, activeFileId, onSelectFile, onN
           ref={fileInputRef} 
           onChange={handleFileChange} 
           accept=".md,.markdown,text/markdown,text/plain" 
+          multiple
           style={{ display: 'none' }} 
         />
       </div>

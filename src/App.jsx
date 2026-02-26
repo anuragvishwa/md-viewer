@@ -44,31 +44,38 @@ export default function App() {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  const loadFile = (fileObj) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      const newFile = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        name: fileObj.name,
-        content: content
-      };
-      
-      setFiles(prev => {
-        const exists = prev.find(f => f.name === newFile.name);
-        if (exists) {
-          return prev.map(f => f.id === exists.id ? {...f, content: newFile.content} : f);
+  const loadFile = (filesToLoad) => {
+    const filesArray = Array.isArray(filesToLoad) ? filesToLoad : [filesToLoad];
+    
+    filesArray.forEach((fileObj, index) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        const newFile = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          name: fileObj.name,
+          content: content
+        };
+        
+        setFiles(prev => {
+          const exists = prev.find(f => f.name === newFile.name);
+          if (exists) {
+            return prev.map(f => f.id === exists.id ? {...f, content: newFile.content} : f);
+          }
+          return [newFile, ...prev];
+        });
+        
+        // Only set the first loaded file as active, or the last one, let's set the first one
+        if (index === 0) {
+          setFiles(prev => {
+             const file = prev.find(f => f.name === newFile.name);
+             if(file) setActiveFileId(file.id);
+             return prev;
+          });
         }
-        return [newFile, ...prev];
-      });
-      
-      setFiles(prev => {
-         const file = prev.find(f => f.name === newFile.name);
-         if(file) setActiveFileId(file.id);
-         return prev;
-      });
-    };
-    reader.readAsText(fileObj);
+      };
+      reader.readAsText(fileObj);
+    });
   };
 
   const handleRemoveFile = (idToRemove, e) => {
@@ -97,7 +104,7 @@ export default function App() {
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      loadFile(e.dataTransfer.files[0]);
+      loadFile(Array.from(e.dataTransfer.files));
     }
   }, []);
 
