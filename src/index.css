@@ -64,7 +64,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* App-like feel, scroll inside panels */
+  overflow: hidden;
 }
 
 ::selection {
@@ -80,7 +80,6 @@ body {
   background-color: var(--bg-app);
 }
 
-/* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
@@ -91,7 +90,7 @@ body {
   flex-direction: column;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  z-index: 10;
+  z-index: 30;
   transition: transform 0.3s ease;
 }
 
@@ -173,10 +172,9 @@ body {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  background-color: var(--bg-app);
+  background-color: var(--bg-paper);
 }
 
-/* Toolbar */
 .toolbar {
   height: 60px;
   padding: 0 var(--space-xl);
@@ -185,11 +183,16 @@ body {
   justify-content: space-between;
   background-color: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
+  z-index: 20;
+  transition: transform 0.3s ease;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+}
+
+.toolbar.hidden {
+  transform: translateY(-100%);
 }
 
 .toolbar-group {
@@ -264,25 +267,20 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-top: 60px; /* Toolbar height */
   padding-bottom: var(--space-xl);
   display: flex;
   justify-content: center;
+  padding-top: 60px; /* Base padding to account for toolbar */
 }
 
 .markdown-body {
   width: 100%;
   max-width: 900px;
-  padding: 60px 80px;
-  background-color: var(--bg-paper);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  padding: 40px 0; /* No left/right padding */
   font-size: calc(var(--md-base-size) * var(--md-scale));
   line-height: 1.6;
   color: var(--text-primary);
   transition: font-size 0.2s ease;
-  margin-top: 20px;
-  min-height: calc(100vh - 120px);
 }
 
 /* Markdown Typography Styles */

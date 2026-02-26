@@ -5,7 +5,8 @@ export default function Toolbar({
   toggleSidebar,
   title, 
   fontSizeFactor, 
-  setFontSizeFactor
+  setFontSizeFactor,
+  isHidden
 }) {
   const handleIncreaseFont = () => {
     setFontSizeFactor(prev => Math.min(prev + 0.1, 2.0));
@@ -16,7 +17,7 @@ export default function Toolbar({
   };
 
   return (
-    <div className="toolbar">
+    <div className={`toolbar ${isHidden ? 'hidden' : ''}`}>
       <div className="toolbar-group">
         <button className="btn-icon" onClick={toggleSidebar} title="Toggle Sidebar">
           <PanelLeft size={18} />

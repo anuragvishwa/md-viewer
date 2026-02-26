@@ -114,6 +114,21 @@ export default function App() {
   const activeContent = files.find(f => f.id === activeFileId)?.content || '';
   const activeName = files.find(f => f.id === activeFileId)?.name || '';
 
+  const [isToolbarHidden, setIsToolbarHidden] = useState(false);
+  const lastScrollY = React.useRef(0);
+
+  const handleScroll = useCallback((e) => {
+    const currentScrollY = e.target.scrollTop;
+    
+    if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+      setIsToolbarHidden(true);
+    } else if (currentScrollY < lastScrollY.current) {
+      setIsToolbarHidden(false);
+    }
+    
+    lastScrollY.current = currentScrollY;
+  }, []);
+
   return (
     <div 
       className="app-container"
@@ -137,12 +152,15 @@ export default function App() {
           title={activeName}
           fontSizeFactor={fontSizeFactor}
           setFontSizeFactor={setFontSizeFactor}
+          isHidden={isToolbarHidden}
         />
         
-        <MarkdownRenderer 
-          content={activeContent} 
-          fontSizeFactor={fontSizeFactor} 
-        />
+        <div className="content-scroll" onScroll={handleScroll}>
+          <MarkdownRenderer 
+            content={activeContent} 
+            fontSizeFactor={fontSizeFactor} 
+          />
+        </div>
         
         {isDragging && (
           <div className="drop-overlay">
