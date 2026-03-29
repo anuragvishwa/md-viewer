@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import MarkdownRenderer from './components/MarkdownRenderer';
 import { Upload } from 'lucide-react';
+import FindInPage from './components/FindInPage';
 
 export default function App() {
   const [isOpen, setIsOpen] = useState(true);
@@ -10,6 +11,41 @@ export default function App() {
   const [activeFileId, setActiveFileId] = useState(null);
   const [fontSizeFactor, setFontSizeFactor] = useState(1.0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Keyboard shortcut for Search (Ctrl+F / Cmd+F)
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Listen for Tauri native file drop
+  React.useEffect(() => {
+    let unlisten;
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen('tauri://file-drop', (event) => {
+        if (event.payload && Array.isArray(event.payload)) {
+          loadFilesByPath(event.payload);
+        } else if (event.payload && event.payload.paths) {
+          loadFilesByPath(event.payload.paths);
+        }
+        setIsDragging(false);
+      }).then(u => unlisten = u);
+      
+      listen('tauri://file-drop-hover', () => setIsDragging(true));
+      listen('tauri://file-drop-cancelled', () => setIsDragging(false));
+    }).catch(e => console.log('Not running in Tauri', e));
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   // Load initial files from local storage or set welcome note
   React.useEffect(() => {
@@ -43,6 +79,45 @@ export default function App() {
   }, [files, activeFileId]);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+
+  const loadFilesByPath = async (paths) => {
+    try {
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
+      const newFiles = [];
+      
+      for (const path of paths) {
+        try {
+          const content = await readTextFile(path);
+          const name = path.split(/[/\\]/).pop();
+          newFiles.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            name,
+            content,
+            path
+          });
+        } catch (e) {
+          console.error("Failed to read", path, e);
+        }
+      }
+
+      setFiles(prev => {
+        let updated = [...prev];
+        for (const nf of newFiles) {
+          const existsIdx = updated.findIndex(f => f.path === nf.path || (!f.path && f.name === nf.name));
+          if (existsIdx >= 0) {
+            updated[existsIdx] = { ...updated[existsIdx], content: nf.content, path: nf.path };
+          } else {
+            updated.unshift(nf);
+          }
+        }
+        return updated;
+      });
+
+      if (newFiles.length > 0) setActiveFileId(newFiles[0].id);
+    } catch (err) {
+      console.error("Not running in Tauri or plugin-fs missing", err);
+    }
+  };
 
   const loadFile = (filesToLoad) => {
     const filesArray = Array.isArray(filesToLoad) ? filesToLoad : [filesToLoad];
@@ -102,39 +177,14 @@ export default function App() {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      loadFile(Array.from(e.dataTransfer.files));
-    }
+    // Ignore HTML5 drop in favor of Tauri's native `tauri://file-drop`
+    // which gives us exact absolute paths.
   }, []);
 
-  const handleNewFile = () => {
-    const newFile = {
-      id: Date.now().toString(),
-      name: `Untitled-${files.length}.md`,
-      content: '# New Document\n\nStart typing here...'
-    };
-    setFiles(prev => [newFile, ...prev]);
-    setActiveFileId(newFile.id);
-  };
+
 
   const activeContent = files.find(f => f.id === activeFileId)?.content || '';
   const activeName = files.find(f => f.id === activeFileId)?.name || '';
-
-  const [isToolbarHidden, setIsToolbarHidden] = useState(false);
-  const lastScrollY = React.useRef(0);
-
-  const handleScroll = useCallback((e) => {
-    const currentScrollY = e.target.scrollTop;
-    
-    if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
-      setIsToolbarHidden(true);
-    } else if (currentScrollY < lastScrollY.current) {
-      setIsToolbarHidden(false);
-    }
-    
-    lastScrollY.current = currentScrollY;
-  }, []);
 
   return (
     <div 
@@ -148,21 +198,40 @@ export default function App() {
         files={files} 
         activeFileId={activeFileId} 
         onSelectFile={setActiveFileId}
-        onNewFile={handleNewFile}
         onRemoveFile={handleRemoveFile}
         onFileUpload={loadFile}
+        onFileUploadDialog={async () => {
+          try {
+            const { open } = await import('@tauri-apps/plugin-dialog');
+            const selected = await open({
+              multiple: true,
+              filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }]
+            });
+            if (selected) {
+               const paths = Array.isArray(selected) ? selected : [selected];
+               loadFilesByPath(paths);
+            }
+          } catch (e) {
+            console.error('Failed to open dialog', e);
+          }
+        }}
       />
-      
+
       <div className="main-area">
+        <FindInPage 
+          isOpen={isSearchOpen} 
+          onClose={() => setIsSearchOpen(false)}
+        />
+        
         <Toolbar 
           toggleSidebar={toggleSidebar}
           title={activeName}
           fontSizeFactor={fontSizeFactor}
           setFontSizeFactor={setFontSizeFactor}
-          isHidden={isToolbarHidden}
+          isHidden={false}
         />
         
-        <div className="content-scroll" onScroll={handleScroll}>
+        <div className="content-scroll">
           <MarkdownRenderer 
             content={activeContent} 
             fontSizeFactor={fontSizeFactor} 

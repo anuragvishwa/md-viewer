@@ -5,6 +5,11 @@ import { FileText } from 'lucide-react';
 import Mermaid from './Mermaid';
 
 export default function MarkdownRenderer({ content, fontSizeFactor }) {
+  // Update CSS variable for markdown scale
+  React.useEffect(() => {
+    document.documentElement.style.setProperty('--md-scale', fontSizeFactor);
+  }, [fontSizeFactor]);
+
   if (!content) {
     return (
       <div className="empty-state">
@@ -15,18 +20,12 @@ export default function MarkdownRenderer({ content, fontSizeFactor }) {
     );
   }
 
-  // Update CSS variable for markdown scale
-  React.useEffect(() => {
-    document.documentElement.style.setProperty('--md-scale', fontSizeFactor);
-  }, [fontSizeFactor]);
-
   return (
-    <div className="content-scroll">
       <div className="markdown-body">
         <ReactMarkdown 
           remarkPlugins={[remarkGfm]}
           components={{
-            code({node, inline, className, children, ...props}) {
+            code({inline, className, children, ...props}) {
               const match = /language-(\w+)/.exec(className || '');
               if (!inline && match && match[1] === 'mermaid') {
                 return <Mermaid chart={String(children).replace(/\n$/, '')} />;
@@ -38,6 +37,5 @@ export default function MarkdownRenderer({ content, fontSizeFactor }) {
           {content}
         </ReactMarkdown>
       </div>
-    </div>
   );
 }

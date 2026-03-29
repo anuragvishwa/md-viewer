@@ -1,13 +1,9 @@
-import React from 'react';
-import { FileText, PanelLeft } from 'lucide-react';
+import React, { useRef } from 'react';
+import { PanelLeft } from 'lucide-react';
 
-export default function Toolbar({ 
-  toggleSidebar,
-  title, 
-  fontSizeFactor, 
-  setFontSizeFactor,
-  isHidden
-}) {
+export default function Toolbar({ toggleSidebar, title, fontSizeFactor, setFontSizeFactor, isHidden }) {
+  const dragState = useRef({ isDown: false, startX: 0, startY: 0, lastClick: 0 });
+
   const handleIncreaseFont = () => {
     setFontSizeFactor(prev => Math.min(prev + 0.1, 2.0));
   };
@@ -16,14 +12,59 @@ export default function Toolbar({
     setFontSizeFactor(prev => Math.max(prev - 0.1, 0.5));
   };
 
+  const handlePointerDown = (e) => {
+    if (e.target.closest('button')) return;
+    
+    const now = Date.now();
+    if (now - dragState.current.lastClick < 400) {
+      // Double click confirmed
+      if (dragState.current.dragTimeout) clearTimeout(dragState.current.dragTimeout);
+      dragState.current.lastClick = 0;
+      
+      import('@tauri-apps/api/window').then(appWindow => {
+        appWindow.getCurrentWindow().isMaximized().then(isMax => {
+          if (isMax) appWindow.getCurrentWindow().unmaximize();
+          else appWindow.getCurrentWindow().maximize();
+        });
+      }).catch(err => console.error(err));
+      return;
+    }
+    
+    dragState.current.lastClick = now;
+    
+    // Defer the OS window drag to allow double clicks to register
+    dragState.current.dragTimeout = setTimeout(() => {
+      import('@tauri-apps/api/window').then((m) => {
+        m.getCurrentWindow().startDragging();
+      });
+    }, 200);
+  };
+
+  const handlePointerUp = () => {
+    if (dragState.current.dragTimeout) {
+      clearTimeout(dragState.current.dragTimeout);
+    }
+  };
+
   return (
-    <div className={`toolbar ${isHidden ? 'hidden' : ''}`}>
+    <div 
+      className={`toolbar ${isHidden ? 'hidden' : ''}`} 
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
       <div className="toolbar-group">
-        <button className="btn-icon" onClick={toggleSidebar} title="Toggle Sidebar">
+        <button 
+          className="btn-icon" 
+          onClick={toggleSidebar}
+          title="Toggle Sidebar"
+        >
           <PanelLeft size={18} />
         </button>
-        <FileText size={18} style={{ color: 'var(--text-secondary)', marginLeft: '8px' }} />
-        <span className="toolbar-title" style={{ marginLeft: '4px' }}>{title || "Untitled"}</span>
+      </div>
+
+      <div className="toolbar-title">
+        {title || "MD Viewer"}
       </div>
 
       <div className="toolbar-group">

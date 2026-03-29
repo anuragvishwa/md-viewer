@@ -1,9 +1,9 @@
 :root {
   /* Colors */
-  --bg-app: #f9f9fa; /* Light gray for workspace */
-  --bg-paper: #ffffff; /* White for the document */
-  --bg-sidebar: #f9f9fa; 
-  --bg-toolbar: transparent;
+  --bg-app: transparent; /* Changed to transparent for Tauri macOS effect */
+  --bg-paper: transparent; /* White for the document */
+  --bg-sidebar: rgba(249, 249, 250, 0.6); 
+  --bg-toolbar: #f9f9fa;
   --border-color: rgba(0, 0, 0, 0.08);
   --text-primary: #1d1d1f;
   --text-secondary: #86868b;
@@ -38,10 +38,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-app: #1e1e1e;
-    --bg-paper: #252526;
-    --bg-sidebar: #1e1e1e;
-    --bg-toolbar: transparent;
+    --bg-app: transparent;
+    --bg-paper: transparent;
+    --bg-sidebar: rgba(30, 30, 30, 0.6);
+    --bg-toolbar: #1e1e1e;
     --border-color: rgba(255, 255, 255, 0.1);
     --text-primary: #f5f5f7;
     --text-secondary: #a1a1a6;
@@ -92,6 +92,23 @@ body {
   -webkit-backdrop-filter: blur(20px);
   z-index: 30;
   transition: transform 0.3s ease;
+  position: relative;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 40;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.sidebar-resizer:hover, .sidebar-resizer:active {
+  background-color: var(--accent-blue);
 }
 
 .sidebar.hidden {
@@ -100,8 +117,8 @@ body {
 }
 
 .sidebar-header {
-  height: var(--toolbar-height);
-  padding: 0 var(--space-md);
+  height: calc(var(--toolbar-height) + 28px);
+  padding: 28px var(--space-md) 0 var(--space-md);
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
@@ -110,6 +127,11 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  -webkit-app-region: drag;
+}
+
+.sidebar-header * {
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-content {
@@ -176,7 +198,7 @@ body {
 }
 
 .toolbar {
-  height: 60px;
+  height: 52px;
   padding: 0 var(--space-xl);
   display: flex;
   align-items: center;
@@ -189,7 +211,11 @@ body {
   top: 0;
   left: 0;
   right: 0;
+  /* Allow Tauri window dragging from toolbar empty spaces */
+  -webkit-app-region: drag;
 }
+
+
 
 .toolbar.hidden {
   transform: translateY(-100%);
@@ -209,6 +235,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 400px;
+  -webkit-app-region: drag;
+}
+
+.toolbar-group span {
+  -webkit-app-region: no-drag;
 }
 
 /* Buttons */
@@ -224,6 +255,7 @@ body {
   color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
+  -webkit-app-region: no-drag;
 }
 
 .btn-icon:hover {
@@ -267,16 +299,17 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: var(--space-xl);
   display: flex;
   justify-content: center;
-  padding-top: 60px; /* Base padding to account for toolbar */
+  padding-top: 52px; /* Base padding to account for toolbar */
+  padding-bottom: var(--space-xl);
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
 }
 
 .markdown-body {
   width: 100%;
-  max-width: 900px;
-  padding: 40px 0; /* No left/right padding */
+  padding: 40px var(--space-xl);
   font-size: calc(var(--md-base-size) * var(--md-scale));
   line-height: 1.6;
   color: var(--text-primary);
@@ -450,4 +483,124 @@ body {
   color: var(--accent-blue);
   font-weight: 500;
   font-size: 1.2rem;
+}
+
+/* Context Menu */
+.context-menu {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 150px;
+}
+
+@supports (backdrop-filter: blur(20px)) {
+  .context-menu {
+    background-color: var(--bg-sidebar);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.context-menu-item:hover {
+  background-color: var(--accent-blue);
+  color: white;
+}
+
+/* Find In Page */
+.find-in-page {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  gap: 8px;
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+
+@supports (backdrop-filter: blur(20px)) {
+  .find-in-page {
+    background-color: var(--bg-sidebar);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.search-icon-small {
+  color: var(--text-secondary);
+}
+
+.find-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  width: 150px;
+}
+
+.find-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.find-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-color);
+  margin: 0 4px;
+}
+
+.btn-icon-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.btn-icon-small:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-icon-small:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
