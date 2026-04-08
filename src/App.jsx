@@ -9,9 +9,15 @@ export default function App() {
   const [isOpen, setIsOpen] = useState(true);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
-  const [fontSizeFactor, setFontSizeFactor] = useState(1.0);
+  const [fontSizeFactor, setFontSizeFactor] = useState(() => {
+    const saved = localStorage.getItem('md-viewer-zoom');
+    return saved ? parseFloat(saved) : 1.2;
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const scrollPositions = React.useRef({});
+  const contentScrollRef = React.useRef(null);
 
   // Keyboard shortcut for Search (Ctrl+F / Cmd+F)
   React.useEffect(() => {
@@ -24,6 +30,59 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Save zoom level when changed
+  React.useEffect(() => {
+    localStorage.setItem('md-viewer-zoom', fontSizeFactor.toString());
+  }, [fontSizeFactor]);
+
+  // Restore scroll position when active file changes
+  React.useEffect(() => {
+    if (contentScrollRef.current && activeFileId) {
+      contentScrollRef.current.scrollTop = scrollPositions.current[activeFileId] || 0;
+    }
+  }, [activeFileId]);
+
+  // Auto-reload files with paths on window focus
+  React.useEffect(() => {
+    const handleFocus = async () => {
+      // Find all files that have a valid path
+      const filesWithPaths = files.filter(f => f.path);
+      if (filesWithPaths.length === 0) return;
+      
+      try {
+        const { readTextFile } = await import('@tauri-apps/plugin-fs');
+        let anyUpdated = false;
+        
+        const updatedFiles = await Promise.all(
+          filesWithPaths.map(async f => {
+            try {
+              const content = await readTextFile(f.path);
+              if (content !== f.content) {
+                anyUpdated = true;
+                return { ...f, content };
+              }
+            } catch (e) {
+              console.error("Failed to auto-reload", f.path, e);
+            }
+            return f;
+          })
+        );
+        
+        if (anyUpdated) {
+          setFiles(prev => prev.map(oldF => {
+            const updated = updatedFiles.find(uf => uf.id === oldF.id);
+            return updated ? updated : oldF;
+          }));
+        }
+      } catch (err) {
+        // Ignore if Tauri API isn't available
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [files]);
 
   // Listen for Tauri native file drop
   React.useEffect(() => {
@@ -231,7 +290,13 @@ export default function App() {
           isHidden={false}
         />
         
-        <div className="content-scroll">
+        <div 
+          className="content-scroll"
+          ref={contentScrollRef}
+          onScroll={(e) => {
+            if (activeFileId) scrollPositions.current[activeFileId] = e.target.scrollTop;
+          }}
+        >
           <MarkdownRenderer 
             content={activeContent} 
             fontSizeFactor={fontSizeFactor} 

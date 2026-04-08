@@ -150,7 +150,7 @@ export default function Sidebar({ isOpen, files, activeFileId, onSelectFile, onR
               onContextMenu={(e) => handleContextMenu(e, file)}
             >
               <FileText size={16} style={{ flexShrink: 0 }} />
-              <span title={file.name} className="file-name" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span title={file.path || file.name} className="file-name" style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {file.name}
               </span>
               <button 
